@@ -1,7 +1,5 @@
 # User Journeys
 
-This walks through the **current implementation** (`branch-pulse-view.html`). The original IA wireframe (`vikram_journey_wireframe.png`) proposed a multi-screen mobile flow with a modal-based simulator; the build below reflects how that intent was actually realized on a single-page map-first dashboard, including the pivots documented in `docs/DESIGN_DECISIONS.md`.
-
 ## Persona
 
 **Vikram, Zonal Head (Western Region).** Travels between branches; historically only learns a branch is underperforming at quarterly review, or after a competitor has already moved in.
@@ -24,16 +22,6 @@ This walks through the **current implementation** (`branch-pulse-view.html`). Th
 
 **8. Decide & act.** The executive summary assembles the business case — justification, top risks, key assumptions, timeline. Vikram taps **Approve rollout** (or Save scenario / Compare later / Export business case). A confirmation toast fires, the action lands in a session-persistent "Recently actioned" list, and the studio closes back to the dashboard — where, as he pans, the right panel hands off to the aggregate leaderboard again. Same mental model, no mode switch to think about.
 
-## What changed vs. the original wireframe
-
-| Original wireframe | Current build | Why (see `docs/DESIGN_DECISIONS.md`) |
-|---|---|---|
-| Separate screens (Home feed → Alert Detail → Hexagon Detail → Simulation modal) | Single page; navigation is zoom-driven, not screen-driven | Faster to demo, and matches how a map-first tool is actually used |
-| Simulation as a centered modal dialog | Full-screen map-primary Strategy Studio (map participates, never covered) | The modal covered the map — fixed; then the whole experience was elevated into the flagship Decision Intelligence Workspace |
-| Hex-grid geography | Real Zone/Cluster/Branch hierarchy with real coordinates | Real branch data was prioritized over a synthetic hex grid for hackathon credibility |
-| Push notification → deep link into the app | Alert banner shown when the relevant branch is in view | No backend exists yet to deliver a real push notification |
-
----
 
 ## Leadership — Anjali, Head of Product Strategy (National)
 
@@ -55,6 +43,6 @@ This walks through the current implementation of the **Leadership view** (`leade
 
 **6. Decide.** The output is a specific, defensible next move — *launch product X in city Y first, pilot in Z, hold on the rest* — the recommended action attached to each band, backed by a factor breakdown she can take straight into a planning conversation.
 
-### What this enables (and what it honestly is not)
+### What this enables
 
 This is a market/product **expansion-opportunity scanner** — which product, in which city, is the best next move — a deliberate, more decision-forcing reading of Leadership's "visualize national health at a glance" need (`docs/IDEA.md`), not a passive health-rollup dashboard. The scoring formula is real, transparent and deterministic; the per-city demand/competitor/footprint inputs it runs on are hand-authored plausibility estimates for these six cities, not live market data — stated plainly in `docs/AI_DECISIONS.md §5`.
