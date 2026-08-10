@@ -7,7 +7,7 @@
 Business, strategy, product, distribution, and branch-expansion teams at Piramal today make growth decisions off fragmented data — branch performance, demographics, demand, competition, geography, credit behavior — with no single hyperlocal view tying it together. This prototype unifies that into one live, drillable, simulate-able map, built for the two personas who actually need it:
 
 - **Zonal Head** (`branch-pulse-view.html`) — a branch-operations view: zoom-driven Zone → Cluster → Branch drill-down over 733 real Piramal branch locations, health scoring, proactive alerts, and an AI Strategy Studio that turns "what happens if I move a slider" into "given a limited budget, what's the smartest intervention here."
-- **Leadership** (`leadership-view.html`) — a market/product expansion-opportunity scanner: pick a product, see which of six candidate cities is the strongest launch/expansion opportunity, understand *why* in one sentence, and compare a shortlist side by side.
+- **Leadership** (`leadership-view.html`) — a market/product expansion-opportunity scanner: pick a product, see which of candidate cities is the strongest launch/expansion opportunity for the current month, understand *why* in one sentence, and compare a shortlist side by side.
 
 Both are single self-contained HTML files sharing one design system (Piramal's Mudra 2.0) and one live-map stack (Leaflet.js + OpenStreetMap — free, no signup, no API key). Full narrative detail: [`docs/IDEA.md`](./docs/IDEA.md) (the problem and original concept) and [`docs/USER_JOURNEY.md`](./docs/USER_JOURNEY.md) (both personas' walkthroughs, as actually built).
 
@@ -28,14 +28,14 @@ Full detail and reasoning: [`PRODUCTION_PLAN.md`](./PRODUCTION_PLAN.md). Summary
 | Workstream | Scope (both views) | Estimate |
 |---|---|---|
 | Backend & API | Data layer + CRUD for branches/zones/clusters *and* the city/product opportunity model; serve real (not embedded) data to both frontends | **5–7 weeks** |
-| Real AI/ML pipeline | Feature store; trained demand/health models (replaces the Zonal Head's deterministic generator); trained market-opportunity scoring (replaces Leadership's hand-authored inputs); model registry, explainability | **8–12 weeks** — the long pole, depends on real historical data being available |
+| Real AI/ML pipeline | Feature store; trained demand/health models ; trained market-opportunity scoring ; model registry, explainability | **8–12 weeks** — the long pole, depends on real historical data being available |
 | Infrastructure | Hosting, CI/CD, environments, monitoring for one backend serving both frontends | **2–3 weeks** |
 | Testing | Unit + integration + e2e across both views (currently zero automated tests) | **3–5 weeks** initial, then ongoing |
 | Security | AuthN/AuthZ, RBAC (Zonal/Cluster/Branch Head vs. Leadership — a real requirement now that both roles exist with genuinely different data scopes) | **2–3 weeks** |
 | Compliance | RBI data-localization review, PII classification, audit logging, legal sign-off | **3–5 weeks** — regulatory timeline, not engineering-bound |
 | Deployment | Production hosting for both frontends, rollout plan, runbook | **1–2 weeks** |
 
-### **Total estimated effort: ~24–37 weeks (6–9 months)** for a genuinely production-ready, two-persona system, assuming a small dedicated team and no reuse of existing Piramal infrastructure.
+### **Total estimated effort: ~24–37 weeks (6–9 months)** for a genuinely production-ready, two-persona system, assuming a small dedicated team and with reuse of existing Piramal infrastructure & collaboration with BIU team for data. 
 
 This shrinks meaningfully wherever backend/auth/hosting can plug into systems that already exist internally at Piramal — worth scoping explicitly before committing to a timeline. (If Leadership were deferred and only the Zonal Head view shipped, the estimate lands closer to **20–33 weeks**.)
 
@@ -45,7 +45,7 @@ This shrinks meaningfully wherever backend/auth/hosting can plug into systems th
 
 ## Setup Instructions
 
-No install, no build, no backend, no API keys. Full detail: [`SETUP.md`](./SETUP.md).
+No install, no build, no backend, no API keys.
 
 **Requirements:** a modern browser; internet access (both views' live maps load Leaflet + OpenStreetMap from CDN, no signup/key required); Python 3 or any static file server.
 
@@ -69,4 +69,4 @@ python3 -m http.server 8000
 
 ---
 
-*For everything beyond these three sections — full feature list, architecture, design decisions, AI/simulation honesty framing, demo script — see [`README.md`](./README.md) and the [`docs/`](./docs) folder.*
+*For everything beyond these three sections — full feature list, architecture, design decisions, AI/simulation honesty framing, demo script. 
