@@ -1,4 +1,4 @@
-# Hackathon Submission
+[AI_DECISIONS.md](https://github.com/user-attachments/files/30886338/AI_DECISIONS.md)# Hackathon Submission
 
 ## Idea Title
 
@@ -69,4 +69,10 @@ python3 -m http.server 8000
 
 ---
 
-*For everything beyond these three sections — full feature list, architecture, design decisions, AI/simulation honesty framing, demo script. 
+*For everything beyond these three sections — full feature list, architecture, design decisions, AI/simulation honesty framing, demo script. [[DEMO_SCRIPT.md](https://github.com/user-attachments/files/30886339/DEMO_SCRIPT.md)[USER_JOURNEY.md](https://github.com/user-attachments/files/30886346/USER_JOURNEY.md)
+[IDEA.md](https://github.com/user-attachments/files/30886345/IDEA.md)
+[FUTURE_SCOPE.md](https://github.com/user-attachments/files/30886342/FUTURE_SCOPE.md)
+[FEATURES.md](https://github.com/user-attachments/files/30886341/FEATURES.md)
+[DESIGN_DECISIONS.md](https://github.com/user-attachments/files/30886340/DESIGN_DECISIONS.md)
+Uploading AI_DECISIONS.md…]()
+
