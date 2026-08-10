@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leadership View — Piramal Finance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<!-- Leaflet 1.9.4 + OpenStreetMap — same library, CDN URL and tile source as branch-pulse-view.html
+     (no API key, no signup). Loaded synchronously so `L` is defined before the React app boots below.
+     D3 was removed: it powered only the old static hex-grid map, now replaced by this live map. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<style>
+/* ============================================================
+   MUDRA 2.0 — TOKEN LAYER
+   Primitives (raw values) -> Semantics (role-based aliases)
+   See mudra-design.md §2 for source values.
+   ============================================================ */
+:root {
+  /* ---------- Primitives: Neutral ---------- */
+  --n-0: #FFFFFF; --n-10: #E6E6E6; --n-20: #CCCCCC; --n-30: #B3B3B3; --n-40: #999999;
+  --n-50: #808080; --n-60: #666666; --n-70: #4D4D4D; --n-80: #333333; --n-90: #191919; --n-100: #000000;
+
+  /* ---------- Primitives: Steel Grey ---------- */
+  --steel-10: #FCFCFC; --steel-20: #F4F4F5; --steel-40: #E1E1E2; --steel-60: #D0D0D4;
+  --steel-80: #A1A1AA; --steel-100: #7A7A83; --steel-120: #52525B; --steel-140: #3F3F46;
+  --steel-160: #27272A; --steel-180: #202024;
+
+  /* ---------- Primitives: Piramal Orange ---------- */
+  --orange-10: #FEF0EC; --orange-20: #FCE1D9; --orange-40: #FAC3B3; --orange-60: #F7A48D;
+  --orange-80: #F58667; --orange-100: #F26841; --orange-120: #C25334; --orange-140: #913E27;
+  --orange-160: #612A1A; --orange-180: #30150D;
+
+  /* ---------- Primitives: Piramal Blue ---------- */
+  --blue-10: #EBEEF0; --blue-20: #D7DCE1; --blue-40: #AFB9C3; --blue-60: #8696A5;
+  --blue-80: #5E7387; --blue-100: #365069; --blue-120: #2B4054; --blue-140: #20303F;
+  --blue-160: #16202A; --blue-180: #0B1015;
+
+  /* ---------- Primitives: Valentine Red ---------- */
+  --red-10: #FFEBED; --red-20: #FFD7DB; --red-40: #FFAEB8; --red-60: #FF8694;
+  --red-80: #FF5D71; --red-100: #FF354D; --red-120: #CC2A3E; --red-140: #99202E;
+  --red-160: #66151F; --red-180: #330B0F;
+
+  /* ---------- Primitives: Texas Yellow ---------- */
+  --yellow-10: #FFF8E6; --yellow-20: #FFF2CD; --yellow-40: #FFE59C; --yellow-60: #FFD76A;
+  --yellow-80: #FFCA39; --yellow-100: #FFBD07; --yellow-120: #CC9706; --yellow-140: #997104;
+  --yellow-160: #664C03; --yellow-180: #332601;
+
+  /* ---------- Primitives: Emerald Green ---------- */
+  --green-10: #E7F7EF; --green-20: #CEEFDF; --green-40: #9DDFBF; --green-60: #6CCE9F;
+  --green-80: #3BBE7F; --green-100: #0AAE5F; --green-120: #088B4C; --green-140: #066839;
+  --green-160: #044626; --green-180: #0D2816;
+
+  /* ---------- Primitives: Royal Blue ---------- */
+  --royal-10: #E9F3FD; --royal-20: #D4E7FA; --royal-40: #A8CFF5; --royal-60: #7DB6F1;
+  --royal-80: #519EEC; --royal-100: #2686E7; --royal-120: #1E6BB9; --royal-140: #17508B;
+  --royal-160: #0F365C; --royal-180: #081B2E;
+
+  /* ---------- Primitives: Dark Lavender ---------- */
+  --lavender-10: #F5EEF7; --lavender-20: #EBDDF0; --lavender-40: #D7BBE0; --lavender-60: #C299D1;
+  --lavender-80: #AE77C1; --lavender-100: #9A55B2; --lavender-120: #7B448E; --lavender-140: #5C336B;
+  --lavender-160: #3E2247; --lavender-180: #1F1124;
+
+  /* ---------- Semantic: Text ---------- */
+  --text-heading: var(--n-90);
+  --text-heading-inv: var(--n-0);
+  --text-body: var(--n-80);
+  --text-body-inv: var(--n-0);
+  --text-subtext: var(--n-60);
+  --text-subtext-inv: var(--n-20);
+  --text-disabled: var(--n-40);
+  --text-placeholder: var(--steel-80);
+  --text-primary: var(--orange-100);
+  --text-primary-dark: var(--orange-120);
+  --text-secondary: var(--blue-100);
+  --text-error: var(--red-100);
+  --text-warning: var(--yellow-140);
+  --text-success: var(--green-100);
+  --text-info: var(--royal-100);
+  --text-discovery: var(--lavender-100);
+
+  /* ---------- Semantic: Background ---------- */
+  --bg-base: var(--n-0);
+  --bg-surface: var(--steel-10);
+  --bg-hover: var(--steel-20);
+  --bg-disabled: var(--n-10);
+  --bg-primary: var(--orange-100);
+  --bg-primary-hover: var(--orange-140);
+  --bg-primary-disabled: var(--orange-40);
+  --bg-primary-light: var(--orange-10);
+  --bg-inverted: var(--steel-160);
+  --bg-error-light: var(--red-10);
+  --bg-warning-light: var(--yellow-10);
+  --bg-success-light: var(--green-10);
+  --bg-info-light: var(--royal-10);
+  --bg-discovery-light: var(--lavender-10);
+
+  /* ---------- Semantic: Border ---------- */
+  --border-default: var(--steel-40);
+  --border-input-focus: var(--n-80);
+  --border-disabled: var(--n-40);
+  --border-primary: var(--orange-100);
+  --border-error: var(--red-100);
+  --border-warning: var(--yellow-100);
+  --border-success: var(--green-100);
+  --border-info: var(--royal-100);
+
+  /* ---------- Semantic: Icon ---------- */
+  --icon-default: var(--n-80);
+  --icon-inverted: var(--n-0);
+  --icon-disabled: var(--n-40);
+  --icon-primary: var(--orange-100);
+  --icon-error: var(--red-100);
+  --icon-warning: var(--yellow-100);
+  --icon-success: var(--green-100);
+  --icon-info: var(--royal-100);
+  --icon-discovery: var(--lavender-100);
+
+  /* ---------- Spacing ---------- */
+  --space-0: 0px; --space-4: 4px; --space-8: 8px; --space-12: 12px; --space-16: 16px;
+  --space-20: 20px; --space-24: 24px; --space-32: 32px; --space-40: 40px; --space-48: 48px;
+  --space-56: 56px; --space-64: 64px; --space-80: 80px; --space-96: 96px; --space-128: 128px;
+
+  /* ---------- Radius ---------- */
+  --radius-none: 0px; --radius-3xs: 2px; --radius-2xs: 4px; --radius-sm: 8px; --radius-md: 12px;
+  --radius-lg: 16px; --radius-xl: 20px; --radius-2xl: 24px; --radius-full: 9999px;
+
+  /* ---------- Shadow (base #16202A) ---------- */
+  --shadow-sm: 0px 1px 4px 0px rgba(22, 32, 42, 0.16);
+  --shadow-md: 0px 2px 8px 0px rgba(22, 32, 42, 0.12);
+  --shadow-lg: 0px 8px 24px 0px rgba(22, 32, 42, 0.12);
+  --shadow-xl: 0px 16px 48px -4px rgba(22, 32, 42, 0.16);
+  --shadow-up: 0px -4px 8px -2px rgba(22, 32, 42, 0.08);
+
+  /* ---------- Size ---------- */
+  --size-xs: 16px; --size-sm: 20px; --size-md: 24px; --size-lg: 32px;
+  --size-xl: 40px; --size-2xl: 48px; --size-3xl: 56px;
+
+  /* ---------- Motion ---------- */
+  --motion-micro: 100ms ease;
+  --motion-short: 200ms ease;
+  --motion-medium-enter: 300ms ease-out;
+  --motion-medium-exit: 300ms ease-in;
+  --motion-long-enter: 400ms ease-out;
+  --motion-long-exit: 400ms ease-in;
+}
+
+/* Map-specific alias (not part of core Mudra semantic set, but derived from
+   a primitive token per §2's "alias through a semantic token" rule). */
+:root {
+  --map-pin: var(--red-100);
+  --map-grid-fill: var(--steel-20);
+  --map-grid-stroke: var(--steel-40);
+}
+/* ============================================================
+   MUDRA 2.0 — TYPOGRAPHY UTILITIES
+   The 11 permitted type styles (mudra-design.md §2.1).
+   Naming: mudra-{token}-{weight}
+   ============================================================ */
+
+.mudra-h1-extrabold { font-size: 3rem; line-height: 64px; font-weight: 800; }
+.mudra-h1-bold       { font-size: 3rem; line-height: 64px; font-weight: 700; }
+
+.mudra-h2-extrabold { font-size: 2.25rem; line-height: 48px; font-weight: 800; }
+.mudra-h2-bold       { font-size: 2.25rem; line-height: 48px; font-weight: 700; }
+
+.mudra-h3-extrabold { font-size: 2rem; line-height: 44px; font-weight: 800; }
+.mudra-h3-bold       { font-size: 2rem; line-height: 44px; font-weight: 700; }
+
+.mudra-h4-extrabold { font-size: 1.75rem; line-height: 40px; font-weight: 800; }
+.mudra-h4-bold       { font-size: 1.75rem; line-height: 40px; font-weight: 700; }
+
+.mudra-h5-extrabold { font-size: 1.5rem; line-height: 32px; font-weight: 800; }
+.mudra-h5-bold       { font-size: 1.5rem; line-height: 32px; font-weight: 700; }
+
+.mudra-h6-bold       { font-size: 1.25rem; line-height: 28px; font-weight: 700; }
+.mudra-h6-extrabold { font-size: 1.25rem; line-height: 28px; font-weight: 800; }
+
+.mudra-b1-regular   { font-size: 1.125rem; line-height: 24px; font-weight: 400; }
+.mudra-b1-bold       { font-size: 1.125rem; line-height: 24px; font-weight: 700; }
+
+.mudra-b2-regular   { font-size: 1rem; line-height: 24px; font-weight: 400; }
+.mudra-b2-bold       { font-size: 1rem; line-height: 24px; font-weight: 700; }
+
+.mudra-b3-regular   { font-size: 0.875rem; line-height: 20px; font-weight: 400; }
+.mudra-b3-bold       { font-size: 0.875rem; line-height: 20px; font-weight: 700; }
+
+.mudra-b4-regular   { font-size: 0.75rem; line-height: 16px; font-weight: 400; }
+.mudra-b4-bold       { font-size: 0.75rem; line-height: 16px; font-weight: 700; }
+
+.mudra-b5-regular   { font-size: 0.625rem; line-height: 14px; font-weight: 400; }
+.mudra-b5-bold       { font-size: 0.625rem; line-height: 14px; font-weight: 700; }
+
+/* Mandatory on every monetary/score figure — mudra-design.md §7.1 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+/* ============================================================
+   MUDRA 2.0 — GLOBAL RESET & BASE
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  color: var(--text-body);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Focus ring — mudra-design.md §11 */
+:focus-visible {
+  outline: 2px solid var(--border-info);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.app-shell-split {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.side-pane {
+  width: 420px;
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  border-left: 1px solid var(--border-default);
+}
+
+.side-pane__scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.side-pane__footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-16) var(--space-24);
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-up);
+}
+
+.side-pane__footer-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* Responsive fallback — mobile/narrow desktop, per IMPLEMENTATION_SPEC.md §7 */
+@media (max-width: 900px) {
+  .app-shell-split {
+    height: auto;
+    min-height: 100vh;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .side-pane {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border-default);
+  }
+
+  .side-pane__scroll {
+    overflow-y: visible;
+  }
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-2xs);
+  font-size: 0.75rem;
+  line-height: 16px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge svg { width: 12px; height: 12px; }
+
+.badge--success { background: var(--bg-success-light); border-color: var(--border-success); color: var(--text-success); }
+.badge--warning { background: var(--bg-warning-light); border-color: var(--border-warning); color: var(--text-warning); }
+.badge--error { background: var(--bg-error-light); border-color: var(--border-error); color: var(--text-error); }
+.badge--info { background: var(--bg-info-light); border-color: var(--border-info); color: var(--text-info); }
+.badge--discovery { background: var(--bg-discovery-light); border-color: var(--text-discovery); color: var(--text-discovery); }
+.badge--neutral { background: var(--bg-hover); border-color: var(--border-default); color: var(--text-subtext); }
+.mudra-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  border: 1px solid transparent;
+  transition: background var(--motion-short), transform var(--motion-micro), box-shadow var(--motion-short);
+}
+/* Height is set per size (--sm 32 / --md 40 / --lg 48), matching branch-pulse-view.html's
+   .btn scale. A base min-height:44px used to sit here and silently overrode every size up
+   to 44px — reconciled away so the size tokens actually take effect. */
+.mudra-btn:active:not(:disabled) { transform: scale(0.98); }
+.mudra-btn:disabled { cursor: not-allowed; }
+.mudra-btn svg { width: var(--size-xs); height: var(--size-xs); flex-shrink: 0; }
+
+/* sizes */
+.mudra-btn--sm { height: var(--size-lg); padding: 0 var(--space-12); font-size: 0.75rem; line-height: 16px; }
+.mudra-btn--md { height: var(--size-xl); padding: 0 var(--space-16); font-size: 0.875rem; line-height: 20px; }
+.mudra-btn--lg { height: var(--size-2xl); padding: 0 var(--space-24); font-size: 1rem; line-height: 24px; }
+
+/* variants */
+.mudra-btn--primary { background: var(--bg-primary); color: var(--text-body-inv); }
+.mudra-btn--primary:hover:not(:disabled) { background: var(--bg-primary-hover); }
+.mudra-btn--primary:disabled { background: var(--bg-primary-disabled); }
+
+.mudra-btn--secondary { background: transparent; color: var(--text-body); border-color: var(--border-default); }
+.mudra-btn--secondary:hover:not(:disabled) { background: var(--bg-hover); }
+.mudra-btn--secondary:disabled { opacity: 0.4; }
+
+.mudra-btn--ghost { background: transparent; color: var(--text-body); }
+.mudra-btn--ghost:hover:not(:disabled) { background: var(--bg-hover); }
+.mudra-btn--ghost:disabled { opacity: 0.4; }
+
+.mudra-btn--destructive { background: var(--bg-error-light); color: var(--text-error); border-color: var(--border-default); }
+.mudra-btn--destructive:hover:not(:disabled) { background: var(--red-20); }
+.mudra-btn--destructive:disabled { opacity: 0.4; }
+
+.mudra-btn__spinner {
+  width: var(--size-xs);
+  height: var(--size-xs);
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+  animation: mudra-spin 700ms linear infinite;
+}
+@keyframes mudra-spin { to { transform: rotate(360deg); } }
+.mudra-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-24);
+  box-shadow: var(--shadow-sm);
+}
+.mudra-card--compact { padding: var(--space-16); }
+.mudra-card--interactive {
+  cursor: pointer;
+  transition: box-shadow var(--motion-short), border-color var(--motion-short);
+}
+.mudra-card--interactive:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--steel-60);
+}
+.map-pane {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Leaflet live-map host — replaces the old static D3/SVG hex-grid illustration.
+   z-index:1 gives it its own stacking context so Leaflet's internal panes and
+   controls (z-index up to ~1000) stay trapped below the floating pills
+   (.map-pill, z-index:10) — the same fix branch-pulse-view.html uses on #studio-map. */
+.leaflet-map-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: #e9eef1;
+}
+.leaflet-map-host .leaflet-container {
+  font-family: 'Nunito', sans-serif;
+  background: #e9eef1;
+}
+
+/* Honest loading / error state shown while the CDN map initialises. */
+.map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-24);
+  background: var(--bg-hover);
+  color: var(--text-subtext);
+  font-size: 0.875rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ---------- floating pill overlays ---------- */
+.map-pill {
+  position: absolute;
+  z-index: 10;
+}
+.map-pill--top-left { top: var(--space-24); left: var(--space-24); }
+.map-pill--top-right { top: var(--space-24); right: var(--space-24); }
+.map-pill--bottom-left { bottom: var(--space-24); left: var(--space-24); }
+
+.map-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: var(--space-8) var(--space-16);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--text-heading);
+}
+
+.map-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: var(--space-8) var(--space-16);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-body);
+  min-height: 40px;
+  transition: background var(--motion-short);
+}
+.map-pill-btn:hover { background: var(--bg-hover); }
+.map-pill-btn svg { color: var(--icon-default); }
+
+.map-pill-select {
+  display: block;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+.map-pill-select select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: var(--space-8) var(--space-32) var(--space-8) var(--space-16);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-body);
+  border-radius: var(--radius-full);
+  min-height: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23333333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.map-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-12) var(--space-16);
+  box-shadow: var(--shadow-sm);
+}
+.map-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-subtext);
+  white-space: nowrap;
+}
+.map-legend__item i {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+/* ---------- city markers (Leaflet divIcon, coloured by opportunity band) ---------- */
+.city-marker-icon { background: none; border: none; }
+.city-marker { position: relative; width: 26px; height: 26px; }
+.city-marker__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--band-color, var(--map-pin));
+  border: 2.5px solid var(--n-0);
+  box-shadow: var(--shadow-md);
+}
+.city-marker__label {
+  position: absolute;
+  top: calc(50% + 13px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  line-height: 14px;
+  font-weight: 800;
+  color: var(--text-heading);
+  background: rgba(252, 252, 252, 0.92);
+  padding: 0 5px;
+  border-radius: var(--radius-2xs);
+  box-shadow: var(--shadow-sm);
+}
+.city-marker__ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: var(--radius-full);
+  background: var(--band-color, var(--map-pin));
+  opacity: 0.4;
+  animation: map-pulse 1.8s ease-out infinite;
+}
+.city-marker--selected .city-marker__pin {
+  outline: 3px solid var(--text-heading);
+  outline-offset: 2px;
+}
+@keyframes map-pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* Leaflet tooltip restyled as the Mudra hover card — same content as before:
+   city name, state · tier, score, band badge, recommended action. */
+.leaflet-tooltip.leadership-tooltip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-12) var(--space-16);
+  min-width: 200px;
+  white-space: normal;
+  color: var(--text-body);
+  font-family: 'Nunito', sans-serif;
+}
+.leaflet-tooltip.leadership-tooltip::before { display: none; }
+.map-tooltip__title { font-size: 0.875rem; font-weight: 800; color: var(--text-heading); }
+.map-tooltip__meta { font-size: 0.75rem; color: var(--text-subtext); margin-bottom: var(--space-8); }
+.map-tooltip__score {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin-bottom: var(--space-4);
+}
+.map-tooltip__action {
+  margin-top: var(--space-8);
+  font-size: 0.75rem;
+  color: var(--text-subtext);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .city-marker__ring { animation: none; opacity: 0; }
+}
+
+@media (max-width: 900px) {
+  .map-pane {
+    flex: none;
+    width: 100%;
+    height: 60vh;
+  }
+}
+.opps-list {
+  padding: var(--space-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.opps-list__header { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.opps-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  border-color: var(--border-success);
+}
+
+.opps-spotlight__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-success);
+}
+
+.opps-spotlight__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.opps-spotlight__city { color: var(--text-heading); }
+.opps-spotlight__score { color: var(--text-heading); }
+
+.opps-spotlight__insight {
+  color: var(--text-body);
+  margin: 0;
+}
+
+.opps-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.opps-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px 1fr auto auto auto;
+  align-items: center;
+  gap: var(--space-12);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-12) var(--space-16);
+  text-align: left;
+  transition: box-shadow var(--motion-short), border-color var(--motion-short);
+  min-height: 44px;
+}
+.opps-row:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--steel-60);
+  background: var(--bg-hover);
+}
+
+.opps-row__rank { color: var(--text-disabled); }
+
+.opps-row__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.opps-row__score { color: var(--text-heading); }
+.score-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--border-default);
+}
+.score-hero__meta { display: flex; flex-direction: column; gap: var(--space-4); }
+.score-hero__figure { display: flex; align-items: baseline; gap: var(--space-4); }
+.score-hero__value {
+  font-size: 2.25rem;
+  line-height: 48px;
+  font-weight: 800;
+  color: var(--text-heading);
+}
+.score-hero__scale { color: var(--text-subtext); }
+.insight-banner {
+  display: flex;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid transparent;
+}
+.insight-banner svg { flex-shrink: 0; margin-top: 2px; }
+.insight-banner__body { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.insight-banner__title { margin: 0; }
+.insight-banner__text { margin: 0; color: var(--text-body); }
+.insight-banner__figure { color: var(--text-primary); font-weight: 800; }
+
+.insight-banner--success { background: var(--bg-success-light); border-left-color: var(--border-success); }
+.insight-banner--info { background: var(--bg-info-light); border-left-color: var(--border-info); }
+.insight-banner--warning { background: var(--bg-warning-light); border-left-color: var(--border-warning); }
+.insight-banner--error { background: var(--bg-error-light); border-left-color: var(--border-error); }
+.factor-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.factor-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.factor-card__icon { display: inline-flex; color: var(--icon-default); }
+.factor-card__label {
+  color: var(--text-subtext);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.factor-card__value-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.factor-card__value { color: var(--text-heading); }
+.factor-card__level {
+  border: 1px solid;
+  border-radius: var(--radius-2xs);
+  padding: 2px var(--space-8);
+  font-weight: 700;
+}
+.factor-card__rationale {
+  margin: 0;
+  color: var(--text-subtext);
+}
+.factor-grid { display: flex; flex-direction: column; gap: var(--space-12); }
+.factor-grid__heading {
+  margin: 0;
+  color: var(--text-subtext);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.factor-grid__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.city-detail {
+  padding: var(--space-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+}
+
+.city-detail__action {
+  display: flex;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+.city-detail__action svg { flex-shrink: 0; margin-top: 2px; }
+
+.city-detail__confidence {
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  padding: var(--space-12) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* ============================================================
+   LEFT NAV RAIL + OVERVIEW LANDING SCREEN
+   ============================================================ */
+.app-frame { height: 100vh; display: flex; overflow: hidden; }
+
+.nav-rail {
+  width: 92px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--bg-inverted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-16) var(--space-8);
+  gap: var(--space-8);
+}
+.nav-rail__brand {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--n-0);
+  font-weight: 800; font-size: 1.125rem;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: var(--space-16);
+}
+.nav-rail__item {
+  width: 76px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: transparent; border: none;
+  color: var(--text-subtext-inv);
+  font-size: 0.6875rem; line-height: 14px; font-weight: 700;
+  transition: background var(--motion-short), color var(--motion-short);
+}
+.nav-rail__item:hover { background: rgba(255, 255, 255, 0.08); color: var(--n-0); }
+.nav-rail__item--active { background: rgba(242, 104, 65, 0.18); color: var(--orange-80); }
+
+.overview { flex: 1; min-width: 0; height: 100%; overflow-y: auto; background: var(--bg-hover); }
+.overview__inner {
+  max-width: 1120px; margin: 0 auto;
+  padding: var(--space-32);
+  display: flex; flex-direction: column; gap: var(--space-32);
+}
+.overview__header h1 { margin: 0; color: var(--text-heading); }
+.overview__header p { margin: var(--space-4) 0 0; color: var(--text-subtext); }
+.section-heading {
+  margin: 0 0 var(--space-12);
+  color: var(--text-subtext);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.ticker-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: var(--space-12); }
+.ticker-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-16);
+  display: flex; flex-direction: column; gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+.ticker-card__label { font-size: 0.6875rem; line-height: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtext); }
+.ticker-card__value { font-size: 1.375rem; line-height: 28px; font-weight: 800; color: var(--text-heading); }
+.ticker-card__delta { display: inline-flex; align-items: center; gap: var(--space-4); font-size: 0.75rem; font-weight: 700; }
+.ticker-card__delta--good { color: var(--text-success); }
+.ticker-card__delta--bad { color: var(--text-error); }
+.ticker-card__note { font-size: 0.6875rem; line-height: 14px; color: var(--text-subtext); }
+
+.reco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-16); align-items: stretch; }
+.reco-card { display: flex; flex-direction: column; gap: var(--space-12); }
+.reco-card__product { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.reco-card__best { display: flex; align-items: baseline; gap: var(--space-8); }
+.reco-card__best-city { color: var(--text-heading); }
+.reco-card__best-score { color: var(--text-heading); }
+.reco-card__rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.reco-card__row { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8) var(--space-12); border-radius: var(--radius-sm); background: var(--bg-hover); }
+.reco-card__row-rank { color: var(--text-disabled); width: 14px; }
+.reco-card__row-city { flex: 1; color: var(--text-heading); }
+.reco-card__why { display: flex; gap: var(--space-8); padding: var(--space-12); border-radius: var(--radius-sm); background: var(--bg-info-light); border-left: 3px solid var(--border-info); }
+.reco-card__why p { margin: 0; color: var(--text-body); }
+.reco-card__cta { margin-top: auto; }
+
+.signals-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-8); }
+.signals-list li {
+  display: flex; align-items: flex-start; gap: var(--space-12);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-12) var(--space-16);
+}
+.signals-list .badge { flex-shrink: 0; }
+.signals-list p { margin: 0; color: var(--text-body); }
+
+@media (max-width: 900px) {
+  .app-frame { height: auto; min-height: 100vh; flex-direction: column; overflow: visible; }
+  .nav-rail { width: 100%; height: auto; flex-direction: row; justify-content: flex-start; padding: var(--space-8) var(--space-16); }
+  .nav-rail__brand { margin-bottom: 0; margin-right: var(--space-8); }
+  .nav-rail__item { width: auto; flex-direction: row; padding: var(--space-8) var(--space-12); }
+  .overview { height: auto; overflow: visible; }
+}
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {
+  useState,
+  useMemo,
+  useEffect,
+  useRef
+} = React;
+
+/* ============================================================
+   ICONS — hand-rolled, lucide-style (stroke 1.5, 24x24 viewbox)
+   ============================================================ */
+function Icon({
+  size = 16,
+  color = "currentColor",
+  fill = "none",
+  strokeWidth = 1.5,
+  children,
+  style,
+  ...rest
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: fill,
+    stroke: color,
+    strokeWidth: strokeWidth,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    style: style,
+    ...rest
+  }, children);
+}
+function MapPinIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "10",
+    r: "3"
+  }));
+}
+function ArrowLeftIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "m12 19-7-7 7-7"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19 12H5"
+  }));
+}
+function LandmarkIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("line", {
+    x1: "3",
+    x2: "21",
+    y1: "22",
+    y2: "22"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    x2: "6",
+    y1: "18",
+    y2: "11"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "10",
+    x2: "10",
+    y1: "18",
+    y2: "11"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "14",
+    x2: "14",
+    y1: "18",
+    y2: "11"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    x2: "18",
+    y1: "18",
+    y2: "11"
+  }), /*#__PURE__*/React.createElement("polygon", {
+    points: "12 2 20 7 4 7"
+  }));
+}
+function TrendingUpIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("polyline", {
+    points: "22 7 13.5 15.5 8.5 10.5 2 17"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "16 7 22 7 22 13"
+  }));
+}
+function InfoIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 16v-4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 8h.01"
+  }));
+}
+function AlertTriangleIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 9v4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 17h.01"
+  }));
+}
+function AlertCircleIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 8v4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 16h.01"
+  }));
+}
+function TargetIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "6"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "2"
+  }));
+}
+function CheckIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M20 6 9 17l-5-5"
+  }));
+}
+function PlusIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12h14"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M12 5v14"
+  }));
+}
+function XIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M18 6 6 18"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m6 6 12 12"
+  }));
+}
+function CrownIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z"
+  }));
+}
+function ChevronRightIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "m9 18 6-6-6-6"
+  }));
+}
+function UsersIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "9",
+    cy: "7",
+    r: "4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M22 21v-2a4 4 0 0 0-3-3.87"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M16 3.13a4 4 0 0 1 0 7.75"
+  }));
+}
+function Building2Icon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M10 6h4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M10 10h4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M10 14h4"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M10 18h4"
+  }));
+}
+function LayersIcon(p) {
+  return /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"
+  }));
+}
+
+/* ============================================================
+   DATA MODEL — IMPLEMENTATION_SPEC.md §4
+   ============================================================ */
+const PRODUCTS = [{
+  id: "gold-loan",
+  name: "Gold Loan",
+  description: "Secured lending against gold jewellery — fast disbursal, existing Piramal product."
+}, {
+  id: "lap",
+  name: "Loan Against Property",
+  description: "Secured lending against residential or commercial property."
+}, {
+  id: "personal-loan",
+  name: "Unsecured Personal Loan",
+  description: "Unsecured lending to salaried and self-employed individuals."
+}];
+const CITIES = [
+  { id: "indore", name: "Indore", state: "Madhya Pradesh", tier: "Tier 2", existingPresence: true, lon: 75.8577, lat: 22.7196 },
+  { id: "nagpur", name: "Nagpur", state: "Maharashtra", tier: "Tier 2", existingPresence: true, lon: 79.0882, lat: 21.1458 },
+  { id: "coimbatore", name: "Coimbatore", state: "Tamil Nadu", tier: "Tier 2", existingPresence: false, lon: 76.9558, lat: 11.0168 },
+  { id: "jaipur", name: "Jaipur", state: "Rajasthan", tier: "Tier 2", existingPresence: true, lon: 75.7873, lat: 26.9124 },
+  { id: "lucknow", name: "Lucknow", state: "Uttar Pradesh", tier: "Tier 2", existingPresence: false, lon: 80.9462, lat: 26.8467 },
+  { id: "guwahati", name: "Guwahati", state: "Assam", tier: "Tier 3", existingPresence: false, lon: 91.7362, lat: 26.1445 },
+  { id: "surat", name: "Surat", state: "Gujarat", tier: "Tier 2", existingPresence: true, lon: 72.8311, lat: 21.1702 },
+  { id: "ahmedabad", name: "Ahmedabad", state: "Gujarat", tier: "Tier 1", existingPresence: true, lon: 72.5714, lat: 23.0225 },
+  { id: "pune", name: "Pune", state: "Maharashtra", tier: "Tier 1", existingPresence: true, lon: 73.8567, lat: 18.5204 },
+  { id: "bhopal", name: "Bhopal", state: "Madhya Pradesh", tier: "Tier 2", existingPresence: false, lon: 77.4126, lat: 23.2599 },
+  { id: "patna", name: "Patna", state: "Bihar", tier: "Tier 2", existingPresence: false, lon: 85.1376, lat: 25.5941 },
+  { id: "ranchi", name: "Ranchi", state: "Jharkhand", tier: "Tier 2", existingPresence: false, lon: 85.3096, lat: 23.3441 },
+  { id: "raipur", name: "Raipur", state: "Chhattisgarh", tier: "Tier 2", existingPresence: false, lon: 81.6296, lat: 21.2514 },
+  { id: "visakhapatnam", name: "Visakhapatnam", state: "Andhra Pradesh", tier: "Tier 2", existingPresence: true, lon: 83.2185, lat: 17.6868 },
+  { id: "vijayawada", name: "Vijayawada", state: "Andhra Pradesh", tier: "Tier 2", existingPresence: false, lon: 80.6480, lat: 16.5062 },
+  { id: "madurai", name: "Madurai", state: "Tamil Nadu", tier: "Tier 2", existingPresence: false, lon: 78.1198, lat: 9.9252 },
+  { id: "kochi", name: "Kochi", state: "Kerala", tier: "Tier 2", existingPresence: false, lon: 76.2673, lat: 9.9312 },
+  { id: "mysuru", name: "Mysuru", state: "Karnataka", tier: "Tier 2", existingPresence: false, lon: 76.6394, lat: 12.2958 },
+  { id: "varanasi", name: "Varanasi", state: "Uttar Pradesh", tier: "Tier 2", existingPresence: false, lon: 82.9739, lat: 25.3176 },
+  { id: "ludhiana", name: "Ludhiana", state: "Punjab", tier: "Tier 2", existingPresence: true, lon: 75.8573, lat: 30.9010 }
+];
+/* Factor values per city & product: [demand, competitorDensity, footprint, confidence] */
+const RAW_FACTORS = {
+  indore: { "gold-loan": [78, 45, 78, "High"], "lap": [62, 55, 70, "High"], "personal-loan": [68, 50, 60, "High"] },
+  nagpur: { "gold-loan": [74, 48, 74, "High"], "lap": [58, 52, 66, "Medium"], "personal-loan": [64, 46, 58, "High"] },
+  coimbatore: { "gold-loan": [70, 40, 35, "Medium"], "lap": [55, 50, 30, "Low"], "personal-loan": [66, 44, 32, "Medium"] },
+  jaipur: { "gold-loan": [79, 41, 75, "High"], "lap": [60, 48, 72, "Medium"], "personal-loan": [58, 52, 62, "Medium"] },
+  lucknow: { "gold-loan": [68, 46, 32, "Medium"], "lap": [54, 56, 34, "Low"], "personal-loan": [60, 50, 30, "Medium"] },
+  guwahati: { "gold-loan": [55, 42, 22, "Low"], "lap": [46, 50, 30, "Low"], "personal-loan": [52, 50, 30, "Low"] },
+  surat: { "gold-loan": [72, 50, 74, "High"], "lap": [70, 48, 72, "High"], "personal-loan": [66, 55, 62, "Medium"] },
+  ahmedabad: { "gold-loan": [70, 58, 76, "High"], "lap": [74, 40, 78, "High"], "personal-loan": [72, 38, 68, "High"] },
+  pune: { "gold-loan": [64, 60, 72, "High"], "lap": [76, 36, 74, "High"], "personal-loan": [78, 34, 70, "High"] },
+  bhopal: { "gold-loan": [66, 44, 34, "Medium"], "lap": [56, 46, 30, "Low"], "personal-loan": [60, 44, 32, "Medium"] },
+  patna: { "gold-loan": [72, 40, 30, "Medium"], "lap": [52, 44, 26, "Low"], "personal-loan": [64, 42, 28, "Medium"] },
+  ranchi: { "gold-loan": [64, 38, 28, "Medium"], "lap": [48, 42, 26, "Low"], "personal-loan": [56, 40, 26, "Low"] },
+  raipur: { "gold-loan": [65, 40, 30, "Medium"], "lap": [54, 44, 28, "Low"], "personal-loan": [58, 42, 28, "Medium"] },
+  visakhapatnam: { "gold-loan": [68, 46, 66, "High"], "lap": [62, 48, 64, "Medium"], "personal-loan": [64, 46, 58, "Medium"] },
+  vijayawada: { "gold-loan": [70, 48, 34, "Medium"], "lap": [58, 50, 30, "Low"], "personal-loan": [60, 46, 30, "Medium"] },
+  madurai: { "gold-loan": [76, 62, 32, "Medium"], "lap": [52, 54, 28, "Low"], "personal-loan": [58, 48, 28, "Medium"] },
+  kochi: { "gold-loan": [72, 66, 30, "Medium"], "lap": [60, 58, 28, "Low"], "personal-loan": [62, 52, 30, "Medium"] },
+  mysuru: { "gold-loan": [66, 52, 30, "Medium"], "lap": [56, 50, 28, "Low"], "personal-loan": [60, 46, 28, "Medium"] },
+  varanasi: { "gold-loan": [70, 42, 30, "Medium"], "lap": [50, 46, 26, "Low"], "personal-loan": [56, 44, 26, "Low"] },
+  ludhiana: { "gold-loan": [62, 48, 68, "High"], "lap": [66, 50, 70, "High"], "personal-loan": [64, 52, 60, "Medium"] }
+};
+
+function demandRationale(city, productId, v) {
+  const level = v >= 65 ? "high" : v >= 50 ? "moderate" : "modest";
+  const hooks = {
+    "gold-loan": `Household gold ownership and the local jewellery trade in ${city.name} support ${level} borrowing demand.`,
+    "lap": `SME activity and property-market momentum in ${city.name} support ${level} property-backed borrowing.`,
+    "personal-loan": `${city.name}'s salaried and self-employed base sustains ${level} personal-loan appetite.`
+  };
+  return hooks[productId];
+}
+function competitorRationale(city, v) {
+  if (v >= 55) return `Lenders are well entrenched in ${city.name} — expect real pricing pressure in this segment.`;
+  if (v >= 45) return `Several banks and NBFCs are active here, but the segment is not yet saturated.`;
+  return `Competitive intensity is comfortably low — few organised players contest this market today.`;
+}
+function footprintRationale(city, v) {
+  if (city.existingPresence) {
+    return v >= 65
+      ? `Piramal already runs branches in ${city.name}, so sourcing and collections infrastructure exist.`
+      : `An existing branch presence lowers the cost of extending this product line.`;
+  }
+  return v >= 30
+    ? `No branch yet — a launch would start from a greenfield or digital-first position.`
+    : `No presence in the region today; distribution would need to be built from scratch.`;
+}
+const CONFIDENCE_NOTES = {
+  High: "Backed by live branch performance data across multiple quarters.",
+  Medium: "Based on regional benchmarks and comparable-market data rather than direct branch history.",
+  Low: "Limited data coverage — treat this reading directionally."
+};
+const ENTRIES = [];
+for (const city of CITIES) {
+  const byProduct = RAW_FACTORS[city.id];
+  for (const product of PRODUCTS) {
+    const [d, c, f, confidence] = byProduct[product.id];
+    ENTRIES.push({
+      cityId: city.id,
+      productId: product.id,
+      demand: { value: d, rationale: demandRationale(city, product.id, d) },
+      competitor: { value: c, rationale: competitorRationale(city, c) },
+      footprint: { value: f, rationale: footprintRationale(city, f) },
+      confidence,
+      confidenceNote: CONFIDENCE_NOTES[confidence]
+    });
+  }
+}
+function scoreValue(entry) {
+  return Math.round(entry.demand.value * 0.45 + (100 - entry.competitor.value) * 0.3 + entry.footprint.value * 0.25);
+}
+function bandFor(score) {
+  if (score >= 72) return "Strong fit";
+  if (score >= 58) return "Promising";
+  if (score >= 45) return "Proceed with caution";
+  return "Not recommended";
+}
+const ACTIONS = {
+  "Strong fit": "Launch — fast-track this city for the next rollout window.",
+  "Promising": "Pilot first — launch on a smaller scale, then scale up if it performs.",
+  "Proceed with caution": "Hold — revisit once competitor or footprint data improves.",
+  "Not recommended": "Deprioritize — resources are better spent on a stronger city right now."
+};
+function leadFactorFor(entry) {
+  const contributions = [["demand", entry.demand.value * 0.45], ["competitor", (100 - entry.competitor.value) * 0.3], ["footprint", entry.footprint.value * 0.25]];
+  contributions.sort((a, b) => b[1] - a[1]);
+  return contributions[0][0];
+}
+function leadFactorPhrase(entry, lead) {
+  switch (lead) {
+    case "demand":
+      return `underlying demand is the strongest signal at ${entry.demand.value}/100`;
+    case "competitor":
+      return entry.competitor.value <= 45 ? `competitor density is comfortably low at ${entry.competitor.value}/100` : `competitor density sits at ${entry.competitor.value}/100, a real headwind`;
+    case "footprint":
+      return entry.footprint.value >= 50 ? `existing footprint gives a real head start at ${entry.footprint.value}/100` : `footprint is limited at ${entry.footprint.value}/100, with no branch to build on`;
+  }
+}
+function insightFor(entry, score, band, cityName, productName) {
+  const lead = leadFactorFor(entry);
+  const phrase = leadFactorPhrase(entry, lead);
+  switch (band) {
+    case "Strong fit":
+      return `${cityName} scores ${score}/100 for ${productName} — ${phrase}, making this a standout opportunity.`;
+    case "Promising":
+      return `${cityName} scores ${score}/100 for ${productName}. ${phrase}, a promising but not yet conclusive case.`;
+    case "Proceed with caution":
+      return `${cityName} scores ${score}/100 for ${productName}. ${phrase}, so this is a hold rather than a green light.`;
+    case "Not recommended":
+      return `${cityName} scores ${score}/100 for ${productName} — ${phrase}, and the overall case doesn't hold up yet.`;
+  }
+}
+function toScoredEntry(entry) {
+  const city = CITIES.find(c => c.id === entry.cityId);
+  const product = PRODUCTS.find(p => p.id === entry.productId);
+  const score = scoreValue(entry);
+  const band = bandFor(score);
+  return {
+    ...entry,
+    score,
+    band,
+    insight: insightFor(entry, score, band, city.name, product.name),
+    action: ACTIONS[band]
+  };
+}
+const SCORED_ENTRIES = ENTRIES.map(toScoredEntry);
+function getEntry(cityId, productId) {
+  return SCORED_ENTRIES.find(e => e.cityId === cityId && e.productId === productId);
+}
+function getEntriesForProduct(productId) {
+  return SCORED_ENTRIES.filter(e => e.productId === productId).sort((a, b) => b.score - a.score);
+}
+
+/* ============================================================
+   MAP — Leaflet + OpenStreetMap (live basemap)
+   The earlier build drew a static D3 geoMercator hex-grid illustration of India
+   here (buildHexGrid / HEX_GRID / pixelForLonLat, projected from an embedded
+   INDIA_MAINLAND GeoJSON). That has been replaced with a real pannable/zoomable
+   Leaflet 1.9.4 + OpenStreetMap map — the same library and tile source as
+   branch-pulse-view.html (no API key, no signup). The map is created imperatively
+   inside IndiaHexMap via a useRef + useEffect pattern, because react-leaflet needs
+   a build step and this project is intentionally CDN-only / no-bundler.
+   See docs/DESIGN_DECISIONS.md ("D3/SVG hex-grid → Leaflet + OpenStreetMap").
+   ============================================================ */
+
+/* ============================================================
+   FACTOR / BAND TOKEN MAPPING — lib/factors.ts
+   ============================================================ */
+function levelFor(value) {
+  if (value >= 65) return "Strong";
+  if (value >= 40) return "Moderate";
+  return "Weak";
+}
+function factorLevel(value, invert = false) {
+  return levelFor(invert ? 100 - value : value);
+}
+const LEVEL_TOKEN = {
+  Strong: {
+    bg: "var(--bg-success-light)",
+    border: "var(--border-success)",
+    text: "var(--text-success)"
+  },
+  Moderate: {
+    bg: "var(--bg-warning-light)",
+    border: "var(--border-warning)",
+    text: "var(--text-warning)"
+  },
+  Weak: {
+    bg: "var(--bg-error-light)",
+    border: "var(--border-error)",
+    text: "var(--text-error)"
+  }
+};
+const CONFIDENCE_TOKEN = {
+  High: {
+    bg: "var(--bg-success-light)",
+    border: "var(--border-success)",
+    text: "var(--text-success)"
+  },
+  Medium: {
+    bg: "var(--bg-warning-light)",
+    border: "var(--border-warning)",
+    text: "var(--text-warning)"
+  },
+  Low: {
+    bg: "var(--bg-error-light)",
+    border: "var(--border-error)",
+    text: "var(--text-error)"
+  }
+};
+const BAND_MAP_COLOR = {
+  "Strong fit": "var(--green-80)",
+  "Promising": "var(--royal-80)",
+  "Proceed with caution": "var(--yellow-80)",
+  "Not recommended": "var(--red-80)"
+};
+const BAND_TONE = {
+  "Strong fit": "success",
+  "Promising": "info",
+  "Proceed with caution": "warning",
+  "Not recommended": "error"
+};
+
+/* ============================================================
+   PRIMITIVES — Badge, Button, Card
+   ============================================================ */
+function Badge({
+  tone,
+  icon,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("span", {
+    className: `badge badge--${tone}`
+  }, icon, /*#__PURE__*/React.createElement("span", null, children));
+}
+function Button({
+  variant = "secondary",
+  size = "md",
+  icon,
+  loading = false,
+  disabled,
+  children,
+  className = "",
+  ...rest
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    className: `mudra-btn mudra-btn--${variant} mudra-btn--${size} ${className}`,
+    disabled: disabled || loading,
+    ...rest
+  }, loading ? /*#__PURE__*/React.createElement("span", {
+    className: "mudra-btn__spinner",
+    "aria-hidden": "true"
+  }) : icon, /*#__PURE__*/React.createElement("span", null, children));
+}
+function Card({
+  compact = false,
+  interactive = false,
+  children,
+  className = "",
+  ...rest
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: `mudra-card ${compact ? "mudra-card--compact" : ""} ${interactive ? "mudra-card--interactive" : ""} ${className}`,
+    ...rest
+  }, children);
+}
+
+/* ============================================================
+   SCORE HERO / INSIGHT BANNER / FACTOR GRID
+   ============================================================ */
+function ScoreHero({
+  city,
+  product,
+  entry
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "score-hero"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "score-hero__meta"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "mudra-h4-extrabold",
+    style: {
+      color: "var(--text-heading)",
+      margin: 0
+    }
+  }, city.name), /*#__PURE__*/React.createElement("p", {
+    className: "mudra-b3-regular",
+    style: {
+      color: "var(--text-subtext)",
+      margin: 0
+    }
+  }, city.state, " · ", city.tier, " · ", product.name)), /*#__PURE__*/React.createElement("div", {
+    className: "score-hero__figure"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "score-hero__value tabular-nums"
+  }, entry.score), /*#__PURE__*/React.createElement("span", {
+    className: "score-hero__scale mudra-b3-regular"
+  }, "/100")), /*#__PURE__*/React.createElement(Badge, {
+    tone: BAND_TONE[entry.band]
+  }, entry.band));
+}
+const INSIGHT_BAND_CONFIG = {
+  "Strong fit": {
+    className: "insight-banner--success",
+    Icon: TrendingUpIcon,
+    title: "Standout opportunity",
+    iconColor: "var(--icon-success)",
+    titleColor: "var(--text-success)"
+  },
+  "Promising": {
+    className: "insight-banner--info",
+    Icon: InfoIcon,
+    title: "Worth a closer look",
+    iconColor: "var(--icon-info)",
+    titleColor: "var(--text-info)"
+  },
+  "Proceed with caution": {
+    className: "insight-banner--warning",
+    Icon: AlertTriangleIcon,
+    title: "Proceed carefully",
+    iconColor: "var(--icon-warning)",
+    titleColor: "var(--text-warning)"
+  },
+  "Not recommended": {
+    className: "insight-banner--error",
+    Icon: AlertCircleIcon,
+    title: "Not the right move yet",
+    iconColor: "var(--icon-error)",
+    titleColor: "var(--text-error)"
+  }
+};
+function renderHighlighted(text) {
+  const parts = text.split(/(\d+\/100)/g);
+  return parts.map((part, i) => /^\d+\/100$/.test(part) ? /*#__PURE__*/React.createElement("span", {
+    key: i,
+    className: "insight-banner__figure"
+  }, part) : /*#__PURE__*/React.createElement("span", {
+    key: i
+  }, part));
+}
+function InsightBanner({
+  band,
+  insight
+}) {
+  const config = INSIGHT_BAND_CONFIG[band];
+  const IconComp = config.Icon;
+  return /*#__PURE__*/React.createElement("div", {
+    className: `insight-banner ${config.className}`
+  }, /*#__PURE__*/React.createElement(IconComp, {
+    size: 20,
+    color: config.iconColor,
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "insight-banner__body"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "insight-banner__title mudra-b2-bold",
+    style: {
+      color: config.titleColor
+    }
+  }, config.title), /*#__PURE__*/React.createElement("p", {
+    className: "insight-banner__text mudra-b3-regular tabular-nums"
+  }, renderHighlighted(insight))));
+}
+function FactorCard({
+  icon,
+  label,
+  value,
+  rationale,
+  level
+}) {
+  const token = LEVEL_TOKEN[level];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "factor-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "factor-card__header"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "factor-card__icon"
+  }, icon), /*#__PURE__*/React.createElement("span", {
+    className: "mudra-b4-bold factor-card__label"
+  }, label)), /*#__PURE__*/React.createElement("div", {
+    className: "factor-card__value-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "factor-card__value tabular-nums mudra-h5-extrabold"
+  }, value), /*#__PURE__*/React.createElement("span", {
+    className: "factor-card__level mudra-b5-regular",
+    style: {
+      background: token.bg,
+      borderColor: token.border,
+      color: token.text
+    }
+  }, level)), /*#__PURE__*/React.createElement("p", {
+    className: "factor-card__rationale mudra-b4-regular"
+  }, rationale));
+}
+function FactorGrid({
+  entry
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "factor-grid"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mudra-b4-bold factor-grid__heading"
+  }, "Factor breakdown"), /*#__PURE__*/React.createElement("div", {
+    className: "factor-grid__cards"
+  }, /*#__PURE__*/React.createElement(FactorCard, {
+    icon: /*#__PURE__*/React.createElement(TrendingUpIcon, {
+      size: 16,
+      "aria-hidden": "true"
+    }),
+    label: "Market demand",
+    value: entry.demand.value,
+    rationale: entry.demand.rationale,
+    level: factorLevel(entry.demand.value)
+  }), /*#__PURE__*/React.createElement(FactorCard, {
+    icon: /*#__PURE__*/React.createElement(UsersIcon, {
+      size: 16,
+      "aria-hidden": "true"
+    }),
+    label: "Competitor density",
+    value: entry.competitor.value,
+    rationale: entry.competitor.rationale,
+    level: factorLevel(entry.competitor.value, true)
+  }), /*#__PURE__*/React.createElement(FactorCard, {
+    icon: /*#__PURE__*/React.createElement(Building2Icon, {
+      size: 16,
+      "aria-hidden": "true"
+    }),
+    label: "Existing footprint",
+    value: entry.footprint.value,
+    rationale: entry.footprint.rationale,
+    level: factorLevel(entry.footprint.value)
+  })));
+}
+
+/* ============================================================
+   OPPORTUNITIES LIST
+   ============================================================ */
+function OpportunitiesList({
+  entries,
+  cities,
+  product,
+  onSelectCity
+}) {
+  const cityById = new Map(cities.map(c => [c.id, c]));
+  const [top, ...rest] = entries;
+  const topCity = top ? cityById.get(top.cityId) : undefined;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "opps-list"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "opps-list__header"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "mudra-h5-extrabold",
+    style: {
+      color: "var(--text-heading)"
+    }
+  }, "Opportunities"), /*#__PURE__*/React.createElement("p", {
+    className: "mudra-b3-regular",
+    style: {
+      color: "var(--text-subtext)"
+    }
+  }, product?.name ?? "Product", ` — ranked across ${entries.length} cities`)), top && topCity && /*#__PURE__*/React.createElement(Card, {
+    interactive: true,
+    className: "opps-spotlight",
+    onClick: () => onSelectCity(top.cityId)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "opps-spotlight__eyebrow"
+  }, /*#__PURE__*/React.createElement(TrendingUpIcon, {
+    size: 14,
+    color: "var(--icon-success)",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("span", null, "Biggest opportunity")), /*#__PURE__*/React.createElement("div", {
+    className: "opps-spotlight__row"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "opps-spotlight__city mudra-h4-extrabold"
+  }, topCity.name), /*#__PURE__*/React.createElement("div", {
+    className: "mudra-b4-regular",
+    style: {
+      color: "var(--text-subtext)"
+    }
+  }, topCity.state, " · ", topCity.tier)), /*#__PURE__*/React.createElement("div", {
+    className: "opps-spotlight__score tabular-nums mudra-h2-extrabold"
+  }, top.score)), /*#__PURE__*/React.createElement(Badge, {
+    tone: BAND_TONE[top.band]
+  }, top.band), /*#__PURE__*/React.createElement("p", {
+    className: "opps-spotlight__insight mudra-b3-regular"
+  }, top.insight)), /*#__PURE__*/React.createElement("ul", {
+    className: "opps-rows",
+    role: "list"
+  }, rest.map((entry, idx) => {
+    const city = cityById.get(entry.cityId);
+    if (!city) return null;
+    return /*#__PURE__*/React.createElement("li", {
+      key: entry.cityId
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "opps-row",
+      onClick: () => onSelectCity(entry.cityId)
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "opps-row__rank mudra-b4-bold"
+    }, idx + 2), /*#__PURE__*/React.createElement("span", {
+      className: "opps-row__name"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "mudra-b3-bold",
+      style: {
+        color: "var(--text-heading)"
+      }
+    }, city.name), /*#__PURE__*/React.createElement("span", {
+      className: "mudra-b4-regular",
+      style: {
+        color: "var(--text-subtext)"
+      }
+    }, city.state)), /*#__PURE__*/React.createElement(Badge, {
+      tone: BAND_TONE[entry.band]
+    }, entry.band), /*#__PURE__*/React.createElement("span", {
+      className: "opps-row__score tabular-nums mudra-b2-bold"
+    }, entry.score), /*#__PURE__*/React.createElement(ChevronRightIcon, {
+      size: 16,
+      color: "var(--icon-default)",
+      "aria-hidden": "true"
+    })));
+  })));
+}
+
+/* ============================================================
+   CITY DETAIL
+   ============================================================ */
+function CityDetail({
+  city,
+  product,
+  entry
+}) {
+  const confidenceToken = CONFIDENCE_TOKEN[entry.confidence];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "city-detail"
+  }, /*#__PURE__*/React.createElement(ScoreHero, {
+    city: city,
+    product: product,
+    entry: entry
+  }), /*#__PURE__*/React.createElement(InsightBanner, {
+    band: entry.band,
+    insight: entry.insight
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "city-detail__action"
+  }, /*#__PURE__*/React.createElement(TargetIcon, {
+    size: 16,
+    color: "var(--icon-default)",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mudra-b4-bold",
+    style: {
+      color: "var(--text-heading)"
+    }
+  }, "Recommended action"), /*#__PURE__*/React.createElement("p", {
+    className: "mudra-b3-regular",
+    style: {
+      color: "var(--text-body)",
+      margin: 0
+    }
+  }, entry.action))), /*#__PURE__*/React.createElement(FactorGrid, {
+    entry: entry
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "city-detail__confidence",
+    style: {
+      background: confidenceToken.bg,
+      borderColor: confidenceToken.border
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "mudra-b4-bold",
+    style: {
+      color: confidenceToken.text
+    }
+  }, entry.confidence, " confidence"), /*#__PURE__*/React.createElement("p", {
+    className: "mudra-b4-regular",
+    style: {
+      color: "var(--text-body)",
+      margin: 0
+    }
+  }, entry.confidenceNote)));
+}
+
+/* ============================================================
+   INDIA HEX MAP
+   ============================================================ */
+function IndiaHexMap({
+  cities,
+  products,
+  productId,
+  onProductChange,
+  entries,
+  selectedCityId,
+  onSelectCity,
+  onBack
+}) {
+  const mapDivRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerLayerRef = useRef(null);
+  const [mapStatus, setMapStatus] = useState("loading"); // "loading" | "ready" | "error"
+
+  // Keep the latest onSelectCity in a ref so the marker effect doesn't rebuild on every
+  // App render (App recreates the handler each render). Markers still call the current
+  // handler; the layer only rebuilds when the map's actual data/selection changes.
+  const onSelectCityRef = useRef(onSelectCity);
+  onSelectCityRef.current = onSelectCity;
+
+  const entryByCity = useMemo(() => {
+    const map = new Map();
+    for (const e of entries) map.set(e.cityId, e);
+    return map;
+  }, [entries]);
+  const biggestOpportunityId = useMemo(() => {
+    if (entries.length === 0) return null;
+    return entries.reduce((best, e) => e.score > best.score ? e : best, entries[0]).cityId;
+  }, [entries]);
+  const activeProduct = products.find(p => p.id === productId);
+
+  // Initialise the live Leaflet map once, on mount. react-leaflet needs a build step, so
+  // the vanilla Leaflet API is driven imperatively: React renders one empty <div> and
+  // Leaflet then owns it completely. The z-index trap lives in CSS (.leaflet-map-host).
+  useEffect(() => {
+    if (!mapDivRef.current) return;
+    if (typeof L === "undefined") { setMapStatus("error"); return; }
+    const map = L.map(mapDivRef.current, {
+      minZoom: 4,
+      maxZoom: 10,
+      zoomControl: false,
+      scrollWheelZoom: true,
+      attributionControl: true
+    });
+    mapRef.current = map;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    // Zoom control bottom-right so it never collides with the top-left / top-right pills.
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+    // Fit all cities in view on open. Called synchronously so the map has a view (and is
+    // "ready" enough to attach markers), then again after a tick with invalidateSize in
+    // case the flex pane hadn't reached its final size yet — the same guard branch-pulse uses.
+    const fitAll = () => {
+      const pts = cities.map(c => [c.lat, c.lon]);
+      if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [64, 64], maxZoom: 6 });
+    };
+    fitAll();
+    map.whenReady(() => setMapStatus("ready"));
+    setTimeout(() => { if (mapRef.current) { mapRef.current.invalidateSize(); fitAll(); } }, 60);
+    return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null; };
+  }, []);
+
+  // (Re)build the 6 city markers whenever the selected product's entries, the biggest
+  // opportunity, or the current selection change. Clear + re-add a layer group rather
+  // than diffing by hand — only 6 markers, so this is cheap and always correct.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || typeof L === "undefined") return;
+    if (markerLayerRef.current) { map.removeLayer(markerLayerRef.current); markerLayerRef.current = null; }
+    const group = L.layerGroup().addTo(map);
+    cities.forEach(city => {
+      const entry = entryByCity.get(city.id);
+      const band = entry ? entry.band : null;
+      const color = band ? BAND_MAP_COLOR[band] : "var(--map-grid-stroke)";
+      const isSelected = selectedCityId === city.id;
+      const isBiggest = biggestOpportunityId === city.id && !selectedCityId;
+      const cls = ["city-marker", isSelected ? "city-marker--selected" : "", isBiggest ? "city-marker--pulse" : ""].filter(Boolean).join(" ");
+      const ring = isBiggest ? '<span class="city-marker__ring"></span>' : "";
+      const html = `<div class="${cls}" data-city-id="${city.id}" style="--band-color:${color}">${ring}<span class="city-marker__pin"></span><span class="city-marker__label">${city.name}</span></div>`;
+      const icon = L.divIcon({ html, className: "city-marker-icon", iconSize: [26, 26], iconAnchor: [13, 13] });
+      const marker = L.marker([city.lat, city.lon], { icon, title: city.name, riseOnHover: true }).addTo(group);
+      // Tooltip content mirrors the previous hover card exactly.
+      const parts = [
+        `<div class="map-tooltip__title">${city.name}</div>`,
+        `<div class="map-tooltip__meta">${city.state} · ${city.tier}</div>`
+      ];
+      if (entry) {
+        parts.push(`<div class="map-tooltip__score tabular-nums">${entry.score}/100</div>`);
+        parts.push(`<span class="badge badge--${BAND_TONE[band]}">${band}</span>`);
+        parts.push(`<div class="map-tooltip__action">${entry.action}</div>`);
+      }
+      marker.bindTooltip(parts.join(""), {
+        direction: "top",
+        offset: [0, -10],
+        opacity: 1,
+        className: "leadership-tooltip",
+        permanent: isSelected
+      });
+      marker.on("click", () => onSelectCityRef.current(city.id));
+    });
+    markerLayerRef.current = group;
+  }, [cities, entryByCity, biggestOpportunityId, selectedCityId]);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "map-pane"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "map-pill map-pill--top-left"
+  }, selectedCityId ? /*#__PURE__*/React.createElement("button", {
+    className: "map-pill-btn",
+    onClick: onBack,
+    "aria-label": "Back to opportunities list"
+  }, /*#__PURE__*/React.createElement(ArrowLeftIcon, {
+    size: 16,
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("span", null, "Back")) : /*#__PURE__*/React.createElement("div", {
+    className: "map-brand"
+  }, /*#__PURE__*/React.createElement(LandmarkIcon, {
+    size: 16,
+    color: "var(--icon-primary)",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("span", null, "Leadership View"))), /*#__PURE__*/React.createElement("div", {
+    className: "map-pill map-pill--top-right"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "map-pill-select"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "sr-only"
+  }, "Select product"), /*#__PURE__*/React.createElement("select", {
+    value: productId,
+    onChange: e => onProductChange(e.target.value),
+    "aria-label": "Select product"
+  }, products.map(p => /*#__PURE__*/React.createElement("option", {
+    key: p.id,
+    value: p.id
+  }, p.name))))), /*#__PURE__*/React.createElement("div", {
+    className: "map-pill map-pill--bottom-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "map-legend"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "map-legend__item"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      background: BAND_MAP_COLOR["Strong fit"]
+    }
+  }), "Strong fit"), /*#__PURE__*/React.createElement("span", {
+    className: "map-legend__item"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      background: BAND_MAP_COLOR["Promising"]
+    }
+  }), "Promising"), /*#__PURE__*/React.createElement("span", {
+    className: "map-legend__item"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      background: BAND_MAP_COLOR["Proceed with caution"]
+    }
+  }), "Caution"), /*#__PURE__*/React.createElement("span", {
+    className: "map-legend__item"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      background: BAND_MAP_COLOR["Not recommended"]
+    }
+  }), "Not recommended"))), /*#__PURE__*/React.createElement("div", {
+    ref: mapDivRef,
+    className: "leaflet-map-host",
+    role: "application",
+    "aria-label": `Live map of India showing city opportunity scores for ${activeProduct?.name ?? "the selected product"}`
+  }), mapStatus !== "ready" && /*#__PURE__*/React.createElement("div", {
+    className: "map-loading"
+  }, mapStatus === "error" ? "Live map unavailable — please check your connection." : "Loading live map…"));
+}
+
+/* ============================================================
+   NAVIGATION RAIL + OVERVIEW LANDING
+   Two-level left navigation: "Overview" (landing screen with the
+   best cities per loan product and the market signals behind the
+   call) and "Map view" (the split map + side-pane screen).
+   ============================================================ */
+const h = React.createElement;
+function HomeIcon(p) {
+  return h(Icon, p, h("path", { d: "m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" }), h("polyline", { points: "9 22 9 12 15 12 15 22" }));
+}
+function MapIcon(p) {
+  return h(Icon, p, h("polygon", { points: "1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" }), h("line", { x1: "8", x2: "8", y1: "2", y2: "18" }), h("line", { x1: "16", x2: "16", y1: "6", y2: "22" }));
+}
+function TrendingDownIcon(p) {
+  return h(Icon, p, h("polyline", { points: "22 17 13.5 8.5 8.5 13.5 2 7" }), h("polyline", { points: "16 17 22 17 22 11" }));
+}
+
+/* Illustrative market numbers for the pilot — refreshed manually for the demo. */
+const MARKET_INDICATORS = [
+  { label: "Gold (10g, 24k)", value: "\u20B91,12,400", delta: "+2.1% MoM", dir: "up", good: true, note: "Rate-cut cycle keeps bullion bid" },
+  { label: "RBI repo rate", value: "5.25%", delta: "\u221225 bps last review", dir: "down", good: true, note: "Cheaper wholesale funding for NBFCs" },
+  { label: "Retail credit growth", value: "16.4%", delta: "+90 bps YoY", dir: "up", good: true, note: "Tier-2 leads urban India" },
+  { label: "Tier-2 housing prices", value: "+6.8%", delta: "YoY", dir: "up", good: true, note: "Strengthens LAP collateral cover" },
+  { label: "Industry gold-loan AUM", value: "+24%", delta: "YoY", dir: "up", good: true, note: "Fastest-growing secured product" },
+  { label: "Unsecured PL stress", value: "3.1%", delta: "+40 bps YoY", dir: "up", good: false, note: "90+ dpd \u2014 argues for secured-led entry" }
+];
+const WHY_NOW = {
+  "gold-loan": "Gold near record highs raises the value of pledged jewellery, so households can unlock more credit per gram \u2014 industry gold-loan AUM is compounding ~24% YoY. Priority: high-ownership markets where competition hasn't saturated.",
+  "lap": "A softening rate cycle plus a Tier-2 property upcycle is reviving SME property-backed borrowing. LAP scales cheapest where a branch network already exists.",
+  "personal-loan": "Formalising salaried bases and deeper bureau coverage make Tier-2 personal loans viable, but rising unsecured stress and fintech pricing pressure mean cross-sell to existing customers wins."
+};
+const MARKET_SIGNALS = [
+  { tag: "Global markets", tone: "warning", text: "Gold has rallied ~30% over the past year as major central banks cut rates \u2014 pledged-jewellery values, LTV headroom and gold-loan demand all rise with it." },
+  { tag: "RBI policy", tone: "info", text: "Repo at 5.25% after successive cuts; lower wholesale funding costs widen NBFC lending spreads across secured products." },
+  { tag: "Regulation", tone: "discovery", text: "Tighter RBI norms on gold-loan LTV monitoring favour organised NBFCs over informal lenders \u2014 an opening in under-banked districts." },
+  { tag: "Housing", tone: "success", text: "Tier-2 housing sales and prices are up ~7% YoY, strengthening collateral cover for Loan Against Property." }
+];
+
+function NavRail({ nav, onNav }) {
+  const items = [
+    { id: "overview", label: "Overview", icon: HomeIcon },
+    { id: "map", label: "Map view", icon: MapIcon }
+  ];
+  return h("nav", { className: "nav-rail", "aria-label": "Primary" },
+    h("div", { className: "nav-rail__brand", "aria-hidden": "true" }, "P"),
+    items.map(item => h("button", {
+      key: item.id,
+      className: `nav-rail__item ${nav === item.id ? "nav-rail__item--active" : ""}`,
+      "aria-current": nav === item.id ? "page" : undefined,
+      onClick: () => onNav(item.id)
+    }, h(item.icon, { size: 20, "aria-hidden": "true" }), h("span", null, item.label))));
+}
+
+function TickerCard({ ind }) {
+  const DirIcon = ind.dir === "down" ? TrendingDownIcon : TrendingUpIcon;
+  return h("div", { className: "ticker-card" },
+    h("span", { className: "ticker-card__label" }, ind.label),
+    h("span", { className: "ticker-card__value tabular-nums" }, ind.value),
+    h("span", { className: `ticker-card__delta ${ind.good ? "ticker-card__delta--good" : "ticker-card__delta--bad"}` },
+      h(DirIcon, { size: 12, "aria-hidden": "true" }),
+      h("span", { className: "tabular-nums" }, ind.delta)),
+    h("span", { className: "ticker-card__note" }, ind.note));
+}
+
+function RecoCard({ product, onExplore }) {
+  const top = getEntriesForProduct(product.id).slice(0, 3);
+  const cityById = new Map(CITIES.map(c => [c.id, c]));
+  const best = top[0];
+  const bestCity = cityById.get(best.cityId);
+  return h(Card, { className: "reco-card" },
+    h("div", { className: "reco-card__product" },
+      h("span", { className: "mudra-b2-bold", style: { color: "var(--text-heading)" } }, product.name),
+      h(Badge, { tone: BAND_TONE[best.band] }, best.band)),
+    h("div", { className: "reco-card__best" },
+      h("span", { className: "reco-card__best-city mudra-h4-extrabold" }, bestCity.name),
+      h("span", { className: "reco-card__best-score tabular-nums mudra-h5-extrabold" }, best.score),
+      h("span", { className: "mudra-b4-regular", style: { color: "var(--text-subtext)" } }, "/100")),
+    h("ul", { className: "reco-card__rows", role: "list" },
+      top.map((entry, i) => {
+        const city = cityById.get(entry.cityId);
+        return h("li", { key: entry.cityId, className: "reco-card__row" },
+          h("span", { className: "reco-card__row-rank mudra-b4-bold" }, i + 1),
+          h("span", { className: "reco-card__row-city mudra-b3-bold" }, city.name),
+          h("span", { className: "mudra-b4-regular", style: { color: "var(--text-subtext)" } }, city.state),
+          h("span", { className: "tabular-nums mudra-b3-bold", style: { color: "var(--text-heading)" } }, entry.score));
+      })),
+    h("div", { className: "reco-card__why" },
+      h(InfoIcon, { size: 16, color: "var(--icon-info)", "aria-hidden": "true", style: { flexShrink: 0, marginTop: 2 } }),
+      h("p", { className: "mudra-b4-regular" }, WHY_NOW[product.id])),
+    h(Button, {
+      variant: "primary", size: "md", className: "reco-card__cta",
+      icon: h(MapPinIcon, { size: 16, "aria-hidden": "true" }),
+      onClick: () => onExplore(product.id)
+    }, "Explore on map"));
+}
+
+function OverviewScreen({ onExplore }) {
+  return h("div", { className: "overview" },
+    h("div", { className: "overview__inner" },
+      h("header", { className: "overview__header" },
+        h("h1", { className: "mudra-h4-extrabold" }, "Where to grow next"),
+        h("p", { className: "mudra-b3-regular" },
+          `The best cities to extend each loan product across ${CITIES.length} candidate markets \u2014 and the market signals behind the call. Figures are illustrative for the pilot.`)),
+      h("section", null,
+        h("h2", { className: "mudra-b4-bold section-heading" }, "Market pulse \u2014 numbers on the move"),
+        h("div", { className: "ticker-row" }, MARKET_INDICATORS.map(ind => h(TickerCard, { key: ind.label, ind })))),
+      h("section", null,
+        h("h2", { className: "mudra-b4-bold section-heading" }, "Best cities by loan product"),
+        h("div", { className: "reco-grid" }, PRODUCTS.map(p => h(RecoCard, { key: p.id, product: p, onExplore })))),
+      h("section", null,
+        h("h2", { className: "mudra-b4-bold section-heading" }, "Why now \u2014 global & policy signals"),
+        h("ul", { className: "signals-list", role: "list" },
+          MARKET_SIGNALS.map((sig, i) => h("li", { key: i },
+            h(Badge, { tone: sig.tone }, sig.tag),
+            h("p", { className: "mudra-b4-regular" }, sig.text)))))));
+}
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+function App() {
+  const [nav, setNav] = useState("overview");
+  const [productId, setProductId] = useState(PRODUCTS[0].id);
+  const [cityId, setCityId] = useState("");
+  const product = PRODUCTS.find(p => p.id === productId);
+  const entriesForProduct = useMemo(() => getEntriesForProduct(productId), [productId]);
+  const selectedCity = cityId ? CITIES.find(c => c.id === cityId) : undefined;
+  const selectedEntry = selectedCity ? getEntry(selectedCity.id, productId) : undefined;
+  function handleExplore(nextProductId) {
+    setProductId(nextProductId);
+    setCityId("");
+    setNav("map");
+  }
+  return h("div", { className: "app-frame" },
+    h(NavRail, { nav, onNav: setNav }),
+    nav === "overview"
+      ? h(OverviewScreen, { onExplore: handleExplore })
+      : h("div", { className: "app-shell-split" },
+          h(IndiaHexMap, {
+            cities: CITIES,
+            products: PRODUCTS,
+            productId,
+            onProductChange: setProductId,
+            entries: entriesForProduct,
+            selectedCityId: cityId,
+            onSelectCity: setCityId,
+            onBack: () => setCityId("")
+          }),
+          h("aside", { className: "side-pane" },
+            h("div", { className: "side-pane__scroll" },
+              selectedCity && selectedEntry && product
+                ? h(CityDetail, { city: selectedCity, product, entry: selectedEntry })
+                : h(OpportunitiesList, { entries: entriesForProduct, cities: CITIES, product, onSelectCity: setCityId })))));
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(h(App, null));
+</script>
+</body>
+</html>
